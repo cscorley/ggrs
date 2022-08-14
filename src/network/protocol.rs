@@ -2,7 +2,7 @@ use crate::frame_info::PlayerInput;
 use crate::network::compression::{decode, encode};
 use crate::network::messages::{
     ConnectionStatus, Input, InputAck, Message, MessageBody, MessageHeader, QualityReply,
-    QualityReport, SyncReply, SyncRequest,
+    QualityReport, SyncReply, SyncRequest, UserData,
 };
 use crate::time_sync::TimeSync;
 use crate::{Config, Frame, GGRSError, NonBlockingSocket, PlayerHandle, NULL_FRAME};
@@ -114,6 +114,8 @@ where
     NetworkInterrupted { disconnect_timeout: u128 },
     /// Sent only after a `NetworkInterrupted` event, if communication has resumed.
     NetworkResumed,
+    /// Client data
+    UserData { bytes: Vec<u8> },
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -458,6 +460,10 @@ impl<T: Config> UdpProtocol<T> {
         self.send_pending_output(connect_status);
     }
 
+    pub(crate) fn send_client_data(&mut self, bytes: Vec<u8>) {
+        self.queue_message(MessageBody::UserData(UserData { bytes }));
+    }
+
     fn send_pending_output(&mut self, connect_status: &[ConnectionStatus]) {
         let mut body = Input::default();
 
@@ -563,6 +569,7 @@ impl<T: Config> UdpProtocol<T> {
             MessageBody::QualityReport(body) => self.on_quality_report(body),
             MessageBody::QualityReply(body) => self.on_quality_reply(body),
             MessageBody::KeepAlive => (),
+            MessageBody::UserData(body) => self.on_client_data(body),
         }
     }
 
@@ -673,7 +680,7 @@ impl<T: Config> UdpProtocol<T> {
             // send an input ack
             self.send_input_ack();
 
-            // delete reveiced inputs that are too old
+            // delete received inputs that are too old
             let last_recv_frame = self.last_recv_frame();
             self.recv_inputs
                 .retain(|&k, _| k >= last_recv_frame - 2 * self.max_prediction as i32);
@@ -697,6 +704,12 @@ impl<T: Config> UdpProtocol<T> {
         let millis = millis_since_epoch();
         assert!(millis >= body.pong);
         self.round_trip_time = millis - body.pong;
+    }
+
+    fn on_client_data(&mut self, body: &UserData) {
+        self.event_queue.push_back(Event::UserData {
+            bytes: body.bytes.clone(),
+        });
     }
 
     /// Returns the frame of the last received input

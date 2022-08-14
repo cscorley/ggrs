@@ -229,7 +229,7 @@ impl<T: Config> P2PSession<T> {
         // receive info from remote players, trigger events and send messages
         self.poll_remote_clients();
 
-        // session is not running and synchronzied
+        // session is not running and synchronized
         if self.state != SessionState::Running {
             return Err(GGRSError::NotSynchronized);
         }
@@ -357,7 +357,7 @@ impl<T: Config> P2PSession<T> {
             }
         }
 
-        // run enpoint poll and get events from players and spectators. This will trigger additional packets to be sent.
+        // run endpoint poll and get events from players and spectators. This will trigger additional packets to be sent.
         let mut events = VecDeque::new();
         for endpoint in self.player_reg.remotes.values_mut() {
             let handles = endpoint.handles().clone();
@@ -388,7 +388,7 @@ impl<T: Config> P2PSession<T> {
         }
     }
 
-    /// Disconnects a remote player and all other remote players with the same address from the session.  
+    /// Disconnects a remote player and all other remote players with the same address from the session.
     /// # Errors
     /// - Returns `InvalidRequest` if you try to disconnect a local player or the provided handle is invalid.
     pub fn disconnect_player(&mut self, player_handle: PlayerHandle) -> Result<(), GGRSError> {
@@ -511,6 +511,14 @@ impl<T: Config> P2PSession<T> {
     /// Returns the number of frames this session is estimated to be ahead of other sessions
     pub fn frames_ahead(&self) -> i32 {
         self.frames_ahead
+    }
+
+    /// Attempt to send each player a copy of `bytes`.  These are not guaranteed
+    /// to be delivered by GGRS as the `socket` supplied may be unreliable.
+    pub fn send_client_data(&mut self, bytes: Vec<u8>) {
+        for endpoint in self.player_reg.remotes.values_mut() {
+            endpoint.send_client_data(bytes.clone());
+        }
     }
 
     fn disconnect_player_at_frame(&mut self, player_handle: PlayerHandle, last_frame: Frame) {
@@ -823,6 +831,10 @@ impl<T: Config> P2PSession<T> {
                     self.sync_layer.add_remote_input(player, input);
                 }
             }
+            // forward bytes to user
+            Event::UserData { bytes } => self
+                .event_queue
+                .push_back(GGRSEvent::UserData { addr, bytes }),
         }
 
         // check event queue size and discard oldest events if too big

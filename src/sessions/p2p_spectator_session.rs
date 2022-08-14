@@ -11,7 +11,7 @@ use crate::{
     SessionState, NULL_FRAME,
 };
 
-// The amount of frames the spectator advances in a single step if not too far behing
+// The amount of frames the spectator advances in a single step if not too far behind
 const NORMAL_SPEED: usize = 1;
 // The amount of inputs a spectator can buffer (a second worth of inputs)
 pub(crate) const SPECTATOR_BUFFER_SIZE: usize = 60;
@@ -239,6 +239,10 @@ impl<T: Config> SpectatorSession<T> {
                     self.host_connect_status[i] = self.host.peer_connect_status(i);
                 }
             }
+            // forward bytes to user
+            Event::UserData { bytes } => self
+                .event_queue
+                .push_back(GGRSEvent::UserData { addr, bytes }),
         }
 
         // check event queue size and discard oldest events if too big
