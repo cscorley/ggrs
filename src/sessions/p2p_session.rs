@@ -388,7 +388,7 @@ impl<T: Config> P2PSession<T> {
         }
     }
 
-    /// Disconnects a remote player and all other remote players with the same address from the session.  
+    /// Disconnects a remote player and all other remote players with the same address from the session.
     /// # Errors
     /// - Returns `InvalidRequest` if you try to disconnect a local player or the provided handle is invalid.
     pub fn disconnect_player(&mut self, player_handle: PlayerHandle) -> Result<(), GGRSError> {
@@ -511,6 +511,14 @@ impl<T: Config> P2PSession<T> {
     /// Returns the number of frames this session is estimated to be ahead of other sessions
     pub fn frames_ahead(&self) -> i32 {
         self.frames_ahead
+    }
+
+    /// doc
+    pub fn send_client_data(&mut self, bytes: Vec<u8>) {
+        for endpoint in self.player_reg.remotes.values_mut() {
+            // send the input directly
+            endpoint.send_client_data(bytes.clone());
+        }
     }
 
     fn disconnect_player_at_frame(&mut self, player_handle: PlayerHandle, last_frame: Frame) {
@@ -822,6 +830,9 @@ impl<T: Config> P2PSession<T> {
                     // add the remote input
                     self.sync_layer.add_remote_input(player, input);
                 }
+            }
+            Event::ClientData { bytes } => {
+                self.event_queue.push_back(GGRSEvent::ClientData { bytes })
             }
         }
 

@@ -1,8 +1,8 @@
 use crate::frame_info::PlayerInput;
 use crate::network::compression::{decode, encode};
 use crate::network::messages::{
-    ConnectionStatus, Input, InputAck, Message, MessageBody, MessageHeader, QualityReply,
-    QualityReport, SyncReply, SyncRequest,
+    ClientData, ConnectionStatus, Input, InputAck, Message, MessageBody, MessageHeader,
+    QualityReply, QualityReport, SyncReply, SyncRequest,
 };
 use crate::time_sync::TimeSync;
 use crate::{Config, Frame, GGRSError, NonBlockingSocket, PlayerHandle, NULL_FRAME};
@@ -114,6 +114,8 @@ where
     NetworkInterrupted { disconnect_timeout: u128 },
     /// Sent only after a `NetworkInterrupted` event, if communication has resumed.
     NetworkResumed,
+    /// Client data
+    ClientData { bytes: Vec<u8> },
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -458,6 +460,10 @@ impl<T: Config> UdpProtocol<T> {
         self.send_pending_output(connect_status);
     }
 
+    pub(crate) fn send_client_data(&mut self, bytes: Vec<u8>) {
+        self.queue_message(MessageBody::ClientData(ClientData { bytes }));
+    }
+
     fn send_pending_output(&mut self, connect_status: &[ConnectionStatus]) {
         let mut body = Input::default();
 
@@ -563,6 +569,7 @@ impl<T: Config> UdpProtocol<T> {
             MessageBody::QualityReport(body) => self.on_quality_report(body),
             MessageBody::QualityReply(body) => self.on_quality_reply(body),
             MessageBody::KeepAlive => (),
+            MessageBody::ClientData(body) => self.on_client_data(body),
         }
     }
 
@@ -697,6 +704,12 @@ impl<T: Config> UdpProtocol<T> {
         let millis = millis_since_epoch();
         assert!(millis >= body.pong);
         self.round_trip_time = millis - body.pong;
+    }
+
+    fn on_client_data(&mut self, body: &ClientData) {
+        self.event_queue.push_back(Event::ClientData {
+            bytes: body.bytes.clone(),
+        });
     }
 
     /// Returns the frame of the last received input

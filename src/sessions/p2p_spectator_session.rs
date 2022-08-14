@@ -239,6 +239,10 @@ impl<T: Config> SpectatorSession<T> {
                     self.host_connect_status[i] = self.host.peer_connect_status(i);
                 }
             }
+            // send it
+            Event::ClientData { bytes } => {
+                self.event_queue.push_back(GGRSEvent::ClientData { bytes })
+            }
         }
 
         // check event queue size and discard oldest events if too big

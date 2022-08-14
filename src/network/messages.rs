@@ -72,6 +72,11 @@ pub(crate) struct QualityReply {
     pub pong: u128,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ClientData {
+    pub bytes: Vec<u8>,
+}
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub(crate) struct MessageHeader {
     pub magic: u16,
@@ -86,6 +91,7 @@ pub(crate) enum MessageBody {
     QualityReport(QualityReport),
     QualityReply(QualityReply),
     KeepAlive,
+    ClientData(ClientData),
 }
 
 /// A messages that `NonBlockingSocket` sends and receives. When implementing `NonBlockingSocket`,

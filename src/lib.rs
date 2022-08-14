@@ -97,7 +97,7 @@ pub enum InputStatus {
 }
 
 /// Notifications that you can receive from the session. Handling them is up to the user.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum GGRSEvent<T>
 where
     T: Config,
@@ -137,6 +137,11 @@ where
     WaitRecommendation {
         /// Amount of frames recommended to be skipped in order to let other clients catch up.
         skip_frames: u32,
+    },
+    /// More data
+    ClientData {
+        /// it's bytes ok
+        bytes: Vec<u8>,
     },
 }
 
