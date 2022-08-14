@@ -77,6 +77,21 @@ pub(crate) struct MessageHeader {
     pub magic: u16,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct GameStateChecksum {
+    pub checksum: u128,
+    pub frame: Frame,
+}
+
+impl Default for GameStateChecksum {
+    fn default() -> Self {
+        Self {
+            frame: NULL_FRAME,
+            checksum: 0,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum MessageBody {
     SyncRequest(SyncRequest),
@@ -86,6 +101,7 @@ pub(crate) enum MessageBody {
     QualityReport(QualityReport),
     QualityReply(QualityReply),
     KeepAlive,
+    GameStateChecksum(GameStateChecksum),
 }
 
 /// A messages that `NonBlockingSocket` sends and receives. When implementing `NonBlockingSocket`,

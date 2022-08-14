@@ -170,7 +170,7 @@ impl<T: Config> SyncLayer<T> {
         Ok(self.input_queues[player_handle].add_input(input))
     }
 
-    /// Adds remote input to the correspoinding input queue.
+    /// Adds remote input to the corresponding input queue.
     /// Unlike `add_local_input`, this will not check for correct conditions, as remote inputs have already been checked on another device.
     pub(crate) fn add_remote_input(
         &mut self,
@@ -215,7 +215,7 @@ impl<T: Config> SyncLayer<T> {
 
     /// Sets the last confirmed frame to a given frame. By raising the last confirmed frame, we can discard all previous frames, as they are no longer necessary.
     pub(crate) fn set_last_confirmed_frame(&mut self, mut frame: Frame, sparse_saving: bool) {
-        // dont set the last confirmed frame after the first incorrect frame before a rollback has happened
+        // don't set the last confirmed frame after the first incorrect frame before a rollback has happened
         let mut first_incorrect: Frame = NULL_FRAME;
         for handle in 0..self.num_players as usize {
             first_incorrect = std::cmp::max(
@@ -229,7 +229,7 @@ impl<T: Config> SyncLayer<T> {
             frame = std::cmp::min(frame, self.last_saved_frame);
         }
 
-        // if we set the last confirmed frame beyond the first incorrect frame, we discard inputs that we need later for ajusting the gamestate.
+        // if we set the last confirmed frame beyond the first incorrect frame, we discard inputs that we need later for adjusting the gamestate.
         assert!(first_incorrect == NULL_FRAME || first_incorrect >= frame);
 
         self.last_confirmed_frame = frame;
@@ -262,6 +262,24 @@ impl<T: Config> SyncLayer<T> {
         } else {
             None
         }
+    }
+
+    /// Gets last saved frame with a checksum
+    pub(crate) fn last_saved_state_with_checksum(&self) -> Option<GameStateCell<T::State>> {
+        if self.current_frame > self.max_prediction as i32 {
+            for offset in 0..self.max_prediction {
+                let cell = self
+                    .saved_states
+                    .get_cell(self.current_frame - offset as i32);
+                println!("checkin sums");
+                if cell.0.lock().checksum.is_some() {
+                    println!("hi we got here tho");
+                    return Some(cell);
+                }
+            }
+        }
+
+        None
     }
 
     /// Returns the latest saved frame

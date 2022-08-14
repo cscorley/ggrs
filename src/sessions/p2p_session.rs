@@ -263,6 +263,8 @@ impl<T: Config> P2PSession<T> {
         }
 
         let last_saved = self.sync_layer.last_saved_frame();
+        let new_confirmed_frame = last_saved > confirmed_frame;
+
         if self.sparse_saving {
             self.check_last_saved_state(last_saved, confirmed_frame, &mut requests);
         } else {
@@ -315,6 +317,16 @@ impl<T: Config> P2PSession<T> {
         for endpoint in self.player_reg.remotes.values_mut() {
             // send the input directly
             endpoint.send_input(&self.local_inputs, &self.local_connect_status);
+
+            // send the game state hash. we send the last saved since the new confirmed frame won't be saved into yet
+            println!("new confirmed frame");
+            if let Some(game_state) = self.sync_layer.last_saved_state_with_checksum() {
+                if let Some(checksum) = game_state.checksum() {
+                    endpoint.send_game_state_checksum(last_saved, checksum);
+                }
+            }
+
+            // send all messages queued
             endpoint.send_all_messages(&mut self.socket);
         }
 
@@ -357,7 +369,7 @@ impl<T: Config> P2PSession<T> {
             }
         }
 
-        // run enpoint poll and get events from players and spectators. This will trigger additional packets to be sent.
+        // run endpoint poll and get events from players and spectators. This will trigger additional packets to be sent.
         let mut events = VecDeque::new();
         for endpoint in self.player_reg.remotes.values_mut() {
             let handles = endpoint.handles().clone();
@@ -388,7 +400,7 @@ impl<T: Config> P2PSession<T> {
         }
     }
 
-    /// Disconnects a remote player and all other remote players with the same address from the session.  
+    /// Disconnects a remote player and all other remote players with the same address from the session.
     /// # Errors
     /// - Returns `InvalidRequest` if you try to disconnect a local player or the provided handle is invalid.
     pub fn disconnect_player(&mut self, player_handle: PlayerHandle) -> Result<(), GGRSError> {
@@ -822,6 +834,10 @@ impl<T: Config> P2PSession<T> {
                     // add the remote input
                     self.sync_layer.add_remote_input(player, input);
                 }
+            }
+            Event::GameStateChecksumReceived { frame, checksum } => {
+                self.event_queue
+                    .push_back(GGRSEvent::GameStateChecksumReceived { frame, checksum });
             }
         }
 

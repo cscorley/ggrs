@@ -1,4 +1,4 @@
-use crate::frame_info::PlayerInput;
+use crate::frame_info::{GameState, PlayerInput};
 use crate::network::compression::{decode, encode};
 use crate::network::messages::{
     ConnectionStatus, Input, InputAck, Message, MessageBody, MessageHeader, QualityReply,
@@ -13,6 +13,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::convert::TryFrom;
 use std::ops::Add;
 
+use super::messages::GameStateChecksum;
 use super::network_stats::NetworkStats;
 
 const UDP_HEADER_SIZE: usize = 28; // Size of IP + UDP headers
@@ -100,7 +101,10 @@ where
     T: Config,
 {
     /// The session is currently synchronizing with the remote client. It will continue until `count` reaches `total`.
-    Synchronizing { total: u32, count: u32 },
+    Synchronizing {
+        total: u32,
+        count: u32,
+    },
     /// The session is now synchronized with the remote client.
     Synchronized,
     /// The session has received an input from the remote client. This event will not be forwarded to the user.
@@ -111,9 +115,15 @@ where
     /// The remote client has disconnected.
     Disconnected,
     /// The session has not received packets from the remote client since `disconnect_timeout` ms.
-    NetworkInterrupted { disconnect_timeout: u128 },
+    NetworkInterrupted {
+        disconnect_timeout: u128,
+    },
     /// Sent only after a `NetworkInterrupted` event, if communication has resumed.
     NetworkResumed,
+    GameStateChecksumReceived {
+        frame: Frame,
+        checksum: u128,
+    },
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -173,6 +183,10 @@ where
     round_trip_time: u128,
     last_send_time: Instant,
     last_recv_time: Instant,
+
+    // game state checksumming
+    last_sent_game_state_frame: Frame,
+    recv_game_state_checksums: Vec<GameStateChecksum>,
 }
 
 impl<T: Config> PartialEq for UdpProtocol<T> {
@@ -209,6 +223,12 @@ impl<T: Config> UdpProtocol<T> {
         // received input history
         let mut recv_inputs = HashMap::new();
         recv_inputs.insert(NULL_FRAME, InputBytes::zeroed::<T>(recv_player_num));
+
+        // received game state checksum history
+        let mut recv_game_state_checksums = Vec::new();
+        for _ in 0..num_players {
+            recv_game_state_checksums.push(GameStateChecksum::default());
+        }
 
         Self {
             num_players,
@@ -255,6 +275,10 @@ impl<T: Config> UdpProtocol<T> {
             round_trip_time: 0,
             last_send_time: Instant::now(),
             last_recv_time: Instant::now(),
+
+            // game state checksum
+            last_sent_game_state_frame: NULL_FRAME,
+            recv_game_state_checksums,
         }
     }
 
@@ -562,6 +586,7 @@ impl<T: Config> UdpProtocol<T> {
             MessageBody::InputAck(body) => self.on_input_ack(*body),
             MessageBody::QualityReport(body) => self.on_quality_report(body),
             MessageBody::QualityReply(body) => self.on_quality_reply(body),
+            MessageBody::GameStateChecksum(body) => self.on_game_state_checksum(body),
             MessageBody::KeepAlive => (),
         }
     }
@@ -673,7 +698,7 @@ impl<T: Config> UdpProtocol<T> {
             // send an input ack
             self.send_input_ack();
 
-            // delete reveiced inputs that are too old
+            // delete received inputs that are too old
             let last_recv_frame = self.last_recv_frame();
             self.recv_inputs
                 .retain(|&k, _| k >= last_recv_frame - 2 * self.max_prediction as i32);
@@ -704,6 +729,24 @@ impl<T: Config> UdpProtocol<T> {
         match self.recv_inputs.iter().max_by_key(|&(k, _)| k) {
             Some((k, _)) => *k,
             None => NULL_FRAME,
+        }
+    }
+
+    /// Upon receiving a `GameStateChecksum`, update network stats.
+    fn on_game_state_checksum(&mut self, body: &GameStateChecksum) {
+        self.event_queue
+            .push_back(Event::GameStateChecksumReceived {
+                frame: body.frame,
+                checksum: body.checksum,
+            });
+    }
+
+    pub(crate) fn send_game_state_checksum(&mut self, frame: Frame, checksum: u128) {
+        if self.last_sent_game_state_frame < frame {
+            self.last_sent_game_state_frame = frame;
+
+            let body = GameStateChecksum { frame, checksum };
+            self.queue_message(MessageBody::GameStateChecksum(body));
         }
     }
 }

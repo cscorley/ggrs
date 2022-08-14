@@ -138,6 +138,14 @@ where
         /// Amount of frames recommended to be skipped in order to let other clients catch up.
         skip_frames: u32,
     },
+
+    /// Sent out if GGRS receives a frame checksum from another peer
+    GameStateChecksumReceived {
+        /// The frame
+        frame: Frame,
+        /// The checksum
+        checksum: u128,
+    },
 }
 
 /// Requests that you can receive from the session. Handling them is mandatory.
