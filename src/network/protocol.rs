@@ -115,7 +115,7 @@ where
     /// Sent only after a `NetworkInterrupted` event, if communication has resumed.
     NetworkResumed,
     /// Client data
-    UserData { bytes: Vec<u8> },
+    UserData { data: Vec<u8> },
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -460,8 +460,8 @@ impl<T: Config> UdpProtocol<T> {
         self.send_pending_output(connect_status);
     }
 
-    pub(crate) fn send_client_data(&mut self, bytes: Vec<u8>) {
-        self.queue_message(MessageBody::UserData(UserData { bytes }));
+    pub(crate) fn send_user_data(&mut self, data: Vec<u8>) {
+        self.queue_message(MessageBody::UserData(UserData { data }));
     }
 
     fn send_pending_output(&mut self, connect_status: &[ConnectionStatus]) {
@@ -569,7 +569,7 @@ impl<T: Config> UdpProtocol<T> {
             MessageBody::QualityReport(body) => self.on_quality_report(body),
             MessageBody::QualityReply(body) => self.on_quality_reply(body),
             MessageBody::KeepAlive => (),
-            MessageBody::UserData(body) => self.on_client_data(body),
+            MessageBody::UserData(body) => self.on_user_data(body),
         }
     }
 
@@ -706,9 +706,9 @@ impl<T: Config> UdpProtocol<T> {
         self.round_trip_time = millis - body.pong;
     }
 
-    fn on_client_data(&mut self, body: &UserData) {
+    fn on_user_data(&mut self, body: &UserData) {
         self.event_queue.push_back(Event::UserData {
-            bytes: body.bytes.clone(),
+            data: body.data.clone(),
         });
     }
 

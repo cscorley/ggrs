@@ -515,9 +515,9 @@ impl<T: Config> P2PSession<T> {
 
     /// Attempt to send each player a copy of `bytes`.  These are not guaranteed
     /// to be delivered by GGRS as the `socket` supplied may be unreliable.
-    pub fn send_client_data(&mut self, bytes: Vec<u8>) {
+    pub fn send_user_data(&mut self, bytes: Vec<u8>) {
         for endpoint in self.player_reg.remotes.values_mut() {
-            endpoint.send_client_data(bytes.clone());
+            endpoint.send_user_data(bytes.clone());
         }
     }
 
@@ -832,9 +832,9 @@ impl<T: Config> P2PSession<T> {
                 }
             }
             // forward bytes to user
-            Event::UserData { bytes } => self
+            Event::UserData { data } => self
                 .event_queue
-                .push_back(GGRSEvent::UserData { addr, bytes }),
+                .push_back(GGRSEvent::UserData { addr, data }),
         }
 
         // check event queue size and discard oldest events if too big

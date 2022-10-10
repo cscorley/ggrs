@@ -240,9 +240,9 @@ impl<T: Config> SpectatorSession<T> {
                 }
             }
             // forward bytes to user
-            Event::UserData { bytes } => self
+            Event::UserData { data } => self
                 .event_queue
-                .push_back(GGRSEvent::UserData { addr, bytes }),
+                .push_back(GGRSEvent::UserData { addr, data }),
         }
 
         // check event queue size and discard oldest events if too big

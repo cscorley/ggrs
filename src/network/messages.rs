@@ -74,7 +74,7 @@ pub(crate) struct QualityReply {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct UserData {
-    pub bytes: Vec<u8>,
+    pub data: Vec<u8>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]

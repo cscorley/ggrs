@@ -143,7 +143,7 @@ where
         /// The address of the endpoint.
         addr: T::Address,
         /// The payload of the message.
-        bytes: Vec<u8>,
+        data: Vec<u8>,
     },
 }
 
