@@ -61,7 +61,7 @@ pub struct Game {
 }
 
 // Messages that users send to one another
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct UserMessage {
     pub text: String,
 }
