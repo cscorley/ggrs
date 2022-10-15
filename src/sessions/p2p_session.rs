@@ -519,6 +519,9 @@ impl<T: Config> P2PSession<T> {
         for endpoint in self.player_reg.remotes.values_mut() {
             endpoint.send_user_data(data.clone());
         }
+        for endpoint in self.player_reg.spectators.values_mut() {
+            endpoint.send_user_data(data.clone());
+        }
     }
 
     fn disconnect_player_at_frame(&mut self, player_handle: PlayerHandle, last_frame: Frame) {

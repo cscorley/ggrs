@@ -1,6 +1,6 @@
 mod ex_game;
 
-use ex_game::{GGRSConfig, Game};
+use ex_game::{GGRSConfig, Game, UserMessage};
 use ggrs::{GGRSError, GGRSEvent, SessionBuilder, SessionState, UdpNonBlockingSocket};
 use instant::{Duration, Instant};
 use macroquad::prelude::*;
@@ -58,10 +58,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // handle GGRS events
         for event in sess.events() {
-            println!("Event: {:?}", event);
-            if let GGRSEvent::Disconnected { .. } = event {
-                println!("Disconnected from host.");
-                return Ok(());
+            match event {
+                ggrs::GGRSEvent::UserData { addr, data } => {
+                    if let Ok(message) = bincode::deserialize::<UserMessage>(data.as_ref()) {
+                        info!("Got message from {:?}: {:?}", addr, message.text);
+                    }
+                }
+                GGRSEvent::Disconnected { .. } => {
+                    println!("Disconnected from host.");
+                    return Ok(());
+                }
+                _ => {
+                    info!("Event: {:?}", event);
+                }
             }
         }
 
