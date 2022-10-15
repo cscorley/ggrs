@@ -114,7 +114,7 @@ where
     NetworkInterrupted { disconnect_timeout: u128 },
     /// Sent only after a `NetworkInterrupted` event, if communication has resumed.
     NetworkResumed,
-    /// Client data
+    /// Data sent between clients that will be handled by the user.
     UserData { data: Vec<u8> },
 }
 
