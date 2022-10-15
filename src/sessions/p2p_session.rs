@@ -515,6 +515,7 @@ impl<T: Config> P2PSession<T> {
 
     /// Attempt to send each player a copy of `bytes`.  These are not guaranteed
     /// to be delivered by GGRS as the `socket` supplied may be unreliable.
+    /// Additionally, spectators can only receive data from the host
     pub fn send_user_data(&mut self, data: Vec<u8>) {
         for endpoint in self.player_reg.remotes.values_mut() {
             endpoint.send_user_data(data.clone());
