@@ -1,13 +1,15 @@
 mod ex_game;
 
-use ex_game::{GGRSConfig, Game};
-use ggrs::{GGRSError, PlayerType, SessionBuilder, SessionState, UdpNonBlockingSocket};
+use ::rand::random;
+use ex_game::{GGRSConfig, Game, UserMessage};
+use ggrs::{Frame, GGRSError, PlayerType, SessionBuilder, SessionState, UdpNonBlockingSocket};
 use instant::{Duration, Instant};
 use macroquad::prelude::*;
 use std::net::SocketAddr;
 use structopt::StructOpt;
 
 const FPS: f64 = 60.0;
+const RANDOM_MESSAGE_PERIOD: i32 = 300;
 
 /// returns a window config for macroquad to use
 fn window_conf() -> Conf {
@@ -72,6 +74,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // time variables for tick rate
     let mut last_update = Instant::now();
     let mut accumulator = Duration::ZERO;
+    let mut last_sent_message: Frame = 0;
 
     loop {
         // communicate, receive and send packets
@@ -79,7 +82,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // print GGRS events
         for event in sess.events() {
-            println!("Event: {:?}", event);
+            match event {
+                ggrs::GGRSEvent::UserData { addr, data } => {
+                    if let Ok(message) = bincode::deserialize::<UserMessage>(data.as_ref()) {
+                        info!("Got message from {:?}: {:?}", addr, message.text);
+                    }
+                }
+                _ => {
+                    info!("Event: {:?}", event);
+                }
+            }
         }
 
         // this is to keep ticks between clients synchronized.
@@ -119,6 +131,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // render the game state
         game.render();
+
+        // see if we want to send a random message
+        let current_frame = sess.current_frame();
+        if current_frame > last_sent_message && current_frame % RANDOM_MESSAGE_PERIOD == 0 {
+            last_sent_message = current_frame;
+            let text = match random::<i8>() % 4 {
+                0 => "Hello!",
+                1 => "Greetings!",
+                2 => "Howdy!",
+                _ => ":) !",
+            }
+            .to_string();
+
+            let stuff = UserMessage { text };
+
+            if let Ok(data) = bincode::serialize(&stuff) {
+                sess.send_user_data(data);
+            }
+        }
 
         // wait for the next loop (macroquads wants it so)
         next_frame().await;

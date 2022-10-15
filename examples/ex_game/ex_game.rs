@@ -60,6 +60,12 @@ pub struct Game {
     periodic_checksum: (Frame, u64),
 }
 
+// Messages that users send to one another
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct UserMessage {
+    pub text: String,
+}
+
 impl Game {
     pub fn new(num_players: usize) -> Self {
         assert!(num_players <= 4);
