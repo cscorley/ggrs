@@ -42,7 +42,7 @@ fn millis_since_epoch() -> u128 {
 // byte-encoded data representing the inputs of a client, possibly for multiple players at the same time
 #[derive(Clone)]
 struct InputBytes {
-    /// The frame to which this info belongs to. -1/`NULL_FRAME` represents an invalid frame
+    /// The frame to which this info belongs to. -1/[`NULL_FRAME`] represents an invalid frame
     pub frame: Frame,
     /// An input buffer that will hold input data
     pub bytes: Vec<u8>,

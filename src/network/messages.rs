@@ -94,8 +94,10 @@ pub(crate) enum MessageBody {
     UserData(UserData),
 }
 
-/// A messages that `NonBlockingSocket` sends and receives. When implementing `NonBlockingSocket`,
-/// you should deserialize received messages into the `Message` type and pass them.
+/// A messages that [`NonBlockingSocket`] sends and receives. When implementing [`NonBlockingSocket`],
+/// you should deserialize received messages into this `Message` type and pass them.
+///
+/// [`NonBlockingSocket`]: crate::NonBlockingSocket
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Message {
     pub(crate) header: MessageHeader,
