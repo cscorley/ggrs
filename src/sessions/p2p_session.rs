@@ -526,11 +526,11 @@ impl<T: Config> P2PSession<T> {
     }
 
     /// Attempt to send each player a copy of `data`.  These are not guaranteed
-    /// to be delivered by GGRS as the `socket` supplied may be unreliable.
-    /// Additionally, spectators can only receive data from the host.  Users
-    /// requiring guaranteed delivery should consider implementing their own
-    /// protocol on top of this that fits their needs (such as ACK their own
-    /// messages), or using a separate socket.
+    /// to be delivered by GGRS as the `socket` supplied may be unreliable, and
+    /// are also uncompressed.  Additionally, spectators can only receive data
+    /// from the host.  Users requiring guaranteed delivery should consider
+    /// implementing their own protocol on top of this that fits their needs
+    /// (such as ACK their own messages), or using a separate socket.
     pub fn send_user_data(&mut self, data: Vec<u8>) {
         for endpoint in self.player_reg.remotes.values_mut() {
             if endpoint.is_running() {
