@@ -706,6 +706,7 @@ impl<T: Config> UdpProtocol<T> {
         self.round_trip_time = millis - body.pong;
     }
 
+    /// Upon receiving a `UserData`, enqueue an event for the user to handle.
     fn on_user_data(&mut self, body: &UserData) {
         self.event_queue.push_back(Event::UserData {
             data: body.data.clone(),
